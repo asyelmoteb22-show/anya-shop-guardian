@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 
@@ -10,6 +10,7 @@ from .storage import (
     get_user,
     get_user_transactions,
 )
+from .telegram import send_telegram_text
 
 app = FastAPI(title="Anya – Shopping Guardian (MVP)")
 
@@ -71,8 +72,7 @@ def evaluate_purchase(user: dict, tx: dict, month_spend_nonessential_before: flo
 
 def build_verdict_message(user: dict, tx: dict, verdict: str, label: str, remaining_after: float) -> str:
     """
-    Create the text you will eventually send on WhatsApp.
-    For now, we just return it in the API response.
+    Create the text you will send on Telegram.
     """
     emoji_map = {"GREEN": "🟢", "ORANGE": "🟠", "RED": "🔴"}
     emoji = emoji_map.get(verdict, "⚪")
@@ -113,14 +113,14 @@ def set_goal(body: SetGoalRequest):
 
 
 @app.post("/add-transaction")
-def add_tx(body: AddTransactionRequest):
+def add_tx(body: AddTransactionRequest, background_tasks: BackgroundTasks):
     """
     Simulate spending on a shopping app.
     This will:
       1) Record the transaction
       2) Calculate current month non-essential spend
       3) Evaluate if this purchase aligns with the saving goal
-      4) Return a verdict + a WhatsApp-style message preview
+      4) Return a verdict + send a Telegram message
     """
     user = get_user(body.user_id)
     if not user:
@@ -141,8 +141,11 @@ def add_tx(body: AddTransactionRequest):
     # 3) Evaluate this purchase
     verdict, label, remaining_after = evaluate_purchase(user, tx, month_spend_before)
 
-    # 4) Build message text (later we will send this on WhatsApp)
+    # 4) Build message text
     verdict_message = build_verdict_message(user, tx, verdict, label, remaining_after)
+
+    # 5) Send Telegram message in the background
+    background_tasks.add_task(send_telegram_text, verdict_message)
 
     return {
         "ok": True,
@@ -151,5 +154,6 @@ def add_tx(body: AddTransactionRequest):
         "verdict_label": label,                  # human-readable label
         "month_spend_nonessential_before": month_spend_before,
         "remaining_nonessential_budget_after": remaining_after,
-        "whatsapp_message_preview": verdict_message,
+        "notification_message": verdict_message,
+        "notify_status": "telegram_send_triggered",
     }
