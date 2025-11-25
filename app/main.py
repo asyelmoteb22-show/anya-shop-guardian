@@ -1,20 +1,65 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+from contextlib import asynccontextmanager
+from sqlalchemy.orm import Session
 
-from .models import SetGoalRequest, AddTransactionRequest
-from .storage import (
+# New imports
+from app.config import settings
+from app.db.database import get_db, init_db
+from app.db.models import User, Goal, Transaction, GoalStatus, TransactionCategory
+from app.messaging.telegram_bot import get_bot
+from app.messaging.telegram_notifier import send_telegram_text
+
+# Legacy imports for backward compatibility
+from app.models import SetGoalRequest, AddTransactionRequest
+from app.storage import (
     USERS,
-    add_transaction,
-    update_goal,
-    get_user,
-    get_user_transactions,
+    add_transaction as legacy_add_transaction,
+    update_goal as legacy_update_goal,
+    get_user as legacy_get_user,
+    get_user_transactions as legacy_get_user_transactions,
 )
-from .telegram import send_telegram_text
 
-app = FastAPI(title="Anya – Shopping Guardian (MVP)")
 
-# Allow all origins for now (for testing from browser / tools)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
+    print("🚀 Starting Anya.fi...")
+    
+    # Initialize database (creates tables if they don't exist)
+    try:
+        init_db()
+    except Exception as e:
+        print(f"⚠️  Database initialization failed: {e}")
+        print("Continuing with in-memory storage...")
+    
+    # Start Telegram bot in polling mode (for development)
+    # In production, use webhooks instead
+    if settings.telegram_bot_token:
+        try:
+            bot = get_bot()
+            # Note: bot.run_polling() blocks, so we don't call it here
+            # Instead, run it separately or use webhooks
+            print("✅ Telegram bot initialized")
+        except Exception as e:
+            print(f"⚠️  Telegram bot initialization failed: {e}")
+    
+    yield
+    
+    # Shutdown
+    print("👋 Shutting down Anya.fi...")
+
+
+app = FastAPI(
+    title="Anya.fi – Financial Co-Pilot",
+    description="Agentic AI for financial guidance on Telegram",
+    version="2.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -22,14 +67,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------- Helper functions for evaluation ----------
+
+# ==================== NEW ENDPOINTS ====================
+
+@app.get("/")
+def root():
+    """Root endpoint."""
+    return {
+        "app": "Anya.fi",
+        "version": "2.0.0",
+        "status": "running",
+        "features": [
+            "Conversational Telegram bot",
+            "MCP agent with OpenAI",
+            "PostgreSQL database",
+            "Redis session management",
+            "Behavioral nudging"
+        ]
+    }
+
+
+@app.get("/health")
+def health():
+    """Health check endpoint."""
+    return {
+        "status": "ok",
+        "database": "connected" if settings.database_url else "not configured",
+        "telegram": "configured" if settings.telegram_bot_token else "not configured",
+        "openai": "configured" if settings.openai_api_key else "not configured"
+    }
+
+
+# ==================== LEGACY ENDPOINTS (Backward Compatibility) ====================
 
 def calc_month_nonessential_spend(user_id: str) -> float:
     """
     Calculate this month's total non-essential spend (shopping, food, entertainment)
     for the given user.
     """
-    txs = get_user_transactions(user_id)
+    txs = legacy_get_user_transactions(user_id)
     now = datetime.utcnow()
     month_start = datetime(year=now.year, month=now.month, day=1)
 
@@ -88,20 +164,15 @@ def build_verdict_message(user: dict, tx: dict, verdict: str, label: str, remain
     return text
 
 
-# -------------------- Routes --------------------
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-
 @app.post("/set-goal")
 def set_goal(body: SetGoalRequest):
     """
     Set the user's monthly saving goal and non-essential budget.
     This is the 'initially feed some goals' step.
+    
+    LEGACY ENDPOINT - Use Telegram bot for new implementations.
     """
-    user = update_goal(
+    user = legacy_update_goal(
         user_id=body.user_id,
         saving_goal=body.month_saving_goal,
         nonessential_budget=body.month_nonessential_budget,
@@ -121,13 +192,15 @@ def add_tx(body: AddTransactionRequest, background_tasks: BackgroundTasks):
       2) Calculate current month non-essential spend
       3) Evaluate if this purchase aligns with the saving goal
       4) Return a verdict + send a Telegram message
+      
+    LEGACY ENDPOINT - Use Telegram bot for new implementations.
     """
-    user = get_user(body.user_id)
+    user = legacy_get_user(body.user_id)
     if not user:
         return {"ok": False, "error": "User not found"}
 
     # 1) Save the transaction
-    tx = add_transaction(
+    tx = legacy_add_transaction(
         user_id=body.user_id,
         amount=body.amount,
         merchant=body.merchant,
@@ -157,3 +230,4 @@ def add_tx(body: AddTransactionRequest, background_tasks: BackgroundTasks):
         "notification_message": verdict_message,
         "notify_status": "telegram_send_triggered",
     }
+
