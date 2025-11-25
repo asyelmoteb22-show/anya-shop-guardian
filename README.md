@@ -1,4 +1,4 @@
-# Anya.fi – Agentic Financial Co‑Pilot on WhatsApp
+# Anya.fi – Agentic Financial Co-Pilot on WhatsApp & Telegram
 
 Stop managing money. Start building wealth.
 
@@ -8,7 +8,7 @@ Stop managing money. Start building wealth.
 
 Most financial apps fail because they expect discipline from users who are already overwhelmed. Dashboards and budgets don’t change behavior — timely, contextual, psychologically aware guidance does.
 
-**Anya.fi** is a proactive Agentic AI that lives inside **WhatsApp**, not a standalone mobile app.  
+**Anya.fi** is a proactive Agentic AI that lives inside **WhatsApp and Telegram**, not a standalone mobile app.  
 It analyzes financial activity in real time and nudges users using human-like, empathetic conversation.
 
 ---
@@ -32,25 +32,25 @@ They need **guidance, not graphs**.
 
 ---
 
-## 🌟 Our Solution: WhatsApp‑First Financial Co‑Pilot
+## 🌟 Our Solution: Chat-First Financial Co-Pilot
 
 ### Core Principles
 - **Zero Input** — No manual logging or categorization  
 - **Proactive AI Assistant**  
 - **Conversational nudges instead of notifications**  
-- **Lives on WhatsApp**  
+- **Lives on WhatsApp & Telegram**  
 - **Uses Account Aggregator for secure data**  
-- **Behavioral psychology‑driven design**  
+- **Behavioral psychology-driven design**  
 
 ---
 
 ## 🧠 Core Experience
 
-### ✔ User chats with Anya on WhatsApp  
+### ✔ User chats with Anya on WhatsApp or Telegram  
 ### ✔ Anya ingests transactions using Account Aggregator  
 ### ✔ LLM interprets spending context  
 ### ✔ Agent orchestrates plugins automatically  
-### ✔ WhatsApp messages deliver personalized nudges  
+### ✔ Chat messages deliver personalized nudges  
 
 ---
 
@@ -59,11 +59,11 @@ They need **guidance, not graphs**.
 ```
                 [User] 
                    |
-               WhatsApp
+         WhatsApp / Telegram Bots
                    |
-          ┌────────────────┐
-          │ WhatsApp Plugin│
-          └────────────────┘
+          ┌────────────────────┐
+          │ Messaging Adapters │
+          └────────────────────┘
                    |
           ┌────────────────┐
           │     MCP Layer  │
@@ -85,11 +85,11 @@ Aggregator    DB      (Zomato,   (Browser ext,
 
 ## 🔌 Plugin Ecosystem
 
-### **1️⃣ Anti‑Impulse Sphere**
-Detects checkout pages via browser extension → triggers intervention on WhatsApp.
+### **1️⃣ Anti-Impulse Sphere**
+Detects checkout pages via browser extension → triggers intervention via WhatsApp/Telegram.
 
-### **2️⃣ Future‑Self Synthesizer**
-Generates personalized images of the user’s dream home or long‑term goals using real real‑estate data.
+### **2️⃣ Future-Self Synthesizer**
+Generates personalized images of the user’s dream home or long-term goals using real real-estate data.
 
 ### **3️⃣ Social Currency Optimizer**
 Recommends socially intelligent alternatives when peer pressure causes costly plans.
@@ -115,14 +115,15 @@ Recommends socially intelligent alternatives when peer pressure causes costly pl
 - **MagicBricks / 99acres APIs**  
 - **PaytmInsider API**
 
-### **User-Facing**
+### **User-Facing Messaging**
 - **WhatsApp Business Cloud API**  
-- **Chrome Extension (Anti‑Impulse Plugin)**  
+- **Telegram Bot API**  
+- **Chrome Extension (Anti-Impulse Plugin)**  
 
 ### **Deployment**
 - **Docker**  
 - **Railway / Render for backend**  
-- **Ngrok for local WhatsApp webhook testing**
+- **Ngrok for local webhook testing**
 
 ---
 
@@ -130,10 +131,11 @@ Recommends socially intelligent alternatives when peer pressure causes costly pl
 
 ---
 
-### **Phase 0 — Pre‑Build Setup**
+### **Phase 0 — Pre-Build Setup**
 
 - Create WhatsApp Business App  
-- Configure webhook + verify token  
+- Create Telegram Bot using BotFather  
+- Configure webhook + verify tokens  
 - Setup FastAPI project structure  
 - Initialize PostgreSQL + schemas  
 - Register with A.A sandbox  
@@ -145,7 +147,7 @@ Recommends socially intelligent alternatives when peer pressure causes costly pl
 ### **Phase 1 — MVP**
 
 #### 🎯 Features
-- WhatsApp bot running end‑to‑end  
+- WhatsApp + Telegram bot both live  
 - AA consent + fetch transactions  
 - Transaction categorization  
 - Goals storage  
@@ -155,27 +157,27 @@ Recommends socially intelligent alternatives when peer pressure causes costly pl
 #### 🎯 User Flow
 1. User: “I want to save for a laptop”  
 2. System stores goal  
-3. When overspending occurs → friendly nudge on WhatsApp  
+3. When overspending occurs → friendly nudge on WhatsApp & Telegram  
 
 ---
 
 ### **Phase 2 — Plugin Development**
 
-#### 🟣 Plugin 1: Anti‑Impulse Sphere
+#### 🟣 Plugin 1: Anti-Impulse Sphere
 - Build Chrome extension  
 - Detect checkout URLs  
 - Emit event → backend  
 - Trigger AI intervention  
 
-#### 🟡 Plugin 2: Future‑Self Synthesizer
+#### 🟡 Plugin 2: Future-Self Synthesizer
 - Fetch real estate data  
-- Generate emotional future‑goal image  
+- Generate emotional future-goal image  
 - Assign as goal thumbnail  
 
 #### 🟢 Plugin 3: Social Currency Optimizer
 - Fetch location + alternatives  
 - Draft socially intelligent message  
-- Deliver via WhatsApp  
+- Deliver via WhatsApp & Telegram  
 
 ---
 
@@ -184,7 +186,7 @@ Recommends socially intelligent alternatives when peer pressure causes costly pl
 - Reliability improvements  
 - Better conversation memory  
 - User analytics dashboard  
-- Auto‑savings workflows  
+- Auto-savings workflows  
 - Personalized investment nudges  
 - Behavioral insights engine  
 
@@ -201,6 +203,9 @@ anya-fi/
  │    │     ├── impulse_agent.py
  │    │     ├── future_self_agent.py
  │    │     ├── social_agent.py
+ │    ├── messaging/
+ │    │     ├── whatsapp.py
+ │    │     ├── telegram.py
  │    ├── plugins/
  │    ├── whatsapp/
  │    ├── db/
@@ -219,8 +224,8 @@ anya-fi/
 ## 🧪 How to Run Locally
 
 ```
-git clone https://github.com/your-org/anya-fi
-cd anya-fi
+git clone https://github.com/asyelmoteb22-show/anya-shop-guardian.git
+cd anya-shop-guardian
 
 # setup env
 cp .env.example .env
@@ -237,9 +242,9 @@ uvicorn main:app --reload
 ## 🌱 Future Roadmap
 
 - Multilingual support  
-- Instagram + Telegram support  
+- Instagram support  
 - Automated SIP + investment plans  
-- Emotional‑AI personality modes  
+- Emotional-AI personality modes  
 - Tax advisory assistant  
 - Personalized bill negotiation AI  
 
