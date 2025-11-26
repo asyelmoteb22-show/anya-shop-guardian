@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, Depends
+from fastapi import FastAPI, BackgroundTasks, Depends, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 from contextlib import asynccontextmanager
@@ -10,6 +10,7 @@ from app.db.database import get_db, init_db
 from app.db.models import User, Goal, Transaction, GoalStatus, TransactionCategory
 from app.messaging.telegram_bot import get_bot
 from app.messaging.telegram_notifier import send_telegram_text
+from app.messaging.whatsapp_bot import get_whatsapp_bot
 
 # Legacy imports for backward compatibility
 from app.models import SetGoalRequest, AddTransactionRequest
@@ -79,7 +80,8 @@ def root():
         "status": "running",
         "features": [
             "Conversational Telegram bot",
-            "MCP agent with OpenAI",
+            "Conversational WhatsApp bot",
+            "MCP agent with Groq LLM",
             "PostgreSQL database",
             "Redis session management",
             "Behavioral nudging"
@@ -94,8 +96,44 @@ def health():
         "status": "ok",
         "database": "connected" if settings.database_url else "not configured",
         "telegram": "configured" if settings.telegram_bot_token else "not configured",
-        "openai": "configured" if settings.openai_api_key else "not configured"
+        "whatsapp": "configured" if settings.whatsapp_access_token else "not configured",
+        "groq": "configured" if settings.groq_api_key else "not configured"
     }
+
+
+# ==================== WHATSAPP WEBHOOK ENDPOINTS ====================
+
+@app.get("/webhook/whatsapp")
+async def whatsapp_webhook_verify(
+    mode: str = Query(alias="hub.mode"),
+    token: str = Query(alias="hub.verify_token"),
+    challenge: str = Query(alias="hub.challenge")
+):
+    """
+    WhatsApp webhook verification endpoint.
+    
+    This is called by Meta when you set up the webhook.
+    """
+    bot = get_whatsapp_bot()
+    result = bot.verify_webhook(mode, token, challenge)
+    
+    if result:
+        return int(result)
+    else:
+        raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_webhook_handler(request: Request):
+    """
+    WhatsApp webhook message handler.
+    
+    Receives incoming WhatsApp messages and processes them.
+    """
+    body = await request.json()
+    bot = get_whatsapp_bot()
+    result = await bot.handle_webhook(body)
+    return result
 
 
 # ==================== LEGACY ENDPOINTS (Backward Compatibility) ====================

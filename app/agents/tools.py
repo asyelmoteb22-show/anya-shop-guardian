@@ -102,6 +102,187 @@ class AgentTools:
             for g in goals
         ]
     
+    def update_goal_progress(
+        self,
+        goal_id: Optional[int] = None,
+        amount: Optional[float] = None,
+        add_amount: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Update goal progress.
+        
+        Args:
+            goal_id: Specific goal ID (if None, updates the first active goal)
+            amount: Set current amount to this value
+            add_amount: Add this amount to current amount
+            
+        Returns:
+            Updated goal information
+        """
+        # Get the goal
+        if goal_id:
+            goal = self.db.query(Goal).filter(
+                Goal.id == goal_id,
+                Goal.user_id == self.user.id
+            ).first()
+        else:
+            # Get first active goal
+            goal = self.db.query(Goal).filter(
+                Goal.user_id == self.user.id,
+                Goal.status == GoalStatus.ACTIVE
+            ).first()
+        
+        if not goal:
+            return {"error": "No goal found"}
+        
+        # Update amount
+        if amount is not None:
+            goal.current_amount = amount
+        elif add_amount is not None:
+            goal.current_amount += add_amount
+        
+        # Check if goal is completed
+        if goal.current_amount >= goal.target_amount:
+            goal.status = GoalStatus.COMPLETED
+        
+        self.db.commit()
+        self.db.refresh(goal)
+        
+        return {
+            "goal_id": goal.id,
+            "title": goal.title,
+            "target_amount": goal.target_amount,
+            "current_amount": goal.current_amount,
+            "progress_percentage": goal.progress_percentage,
+            "status": goal.status.value
+        }
+    
+    def update_budget(self, budget_amount: float, goal_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Update monthly non-essential budget for a goal.
+        
+        Args:
+            budget_amount: Monthly budget amount
+            goal_id: Specific goal ID (if None, updates first active goal)
+            
+        Returns:
+            Updated goal information
+        """
+        # Get the goal
+        if goal_id:
+            goal = self.db.query(Goal).filter(
+                Goal.id == goal_id,
+                Goal.user_id == self.user.id
+            ).first()
+        else:
+            # Get first active goal
+            goal = self.db.query(Goal).filter(
+                Goal.user_id == self.user.id,
+                Goal.status == GoalStatus.ACTIVE
+            ).first()
+        
+        if not goal:
+            return {"error": "No goal found"}
+        
+        # Update budget
+        goal.month_nonessential_budget = budget_amount
+        
+        self.db.commit()
+        self.db.refresh(goal)
+        
+        return {
+            "goal_id": goal.id,
+            "title": goal.title,
+            "month_nonessential_budget": goal.month_nonessential_budget
+        }
+    
+    def delete_goals(self, goal_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Delete goals for the user.
+        
+        Args:
+            goal_id: Specific goal ID to delete (if None, deletes all active goals)
+            
+        Returns:
+            Result dictionary
+        """
+        if goal_id:
+            # Delete specific goal
+            goal = self.db.query(Goal).filter(
+                Goal.id == goal_id,
+                Goal.user_id == self.user.id
+            ).first()
+            
+            if not goal:
+                return {"error": "Goal not found"}
+            
+            self.db.delete(goal)
+            self.db.commit()
+            
+            return {
+                "deleted": 1,
+                "message": f"Deleted goal: {goal.title}"
+            }
+        else:
+            # Delete all active goals
+            deleted_count = self.db.query(Goal).filter(
+                Goal.user_id == self.user.id,
+                Goal.status == GoalStatus.ACTIVE
+            ).delete()
+            
+            self.db.commit()
+            
+            return {
+                "deleted": deleted_count,
+                "message": f"Deleted {deleted_count} goal(s)"
+            }
+    
+    def add_transaction(
+        self,
+        amount: float,
+        merchant: str,
+        category: str = "other",
+        is_essential: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Add a new transaction.
+        
+        Args:
+            amount: Transaction amount
+            merchant: Merchant name
+            category: Transaction category
+            is_essential: Whether expense is essential
+            
+        Returns:
+            Created transaction details
+        """
+        # Map category string to enum
+        try:
+            cat_enum = TransactionCategory(category.lower())
+        except ValueError:
+            cat_enum = TransactionCategory.OTHER
+            
+        transaction = Transaction(
+            user_id=self.user.id,
+            amount=amount,
+            merchant=merchant,
+            category=cat_enum,
+            is_essential=is_essential,
+            timestamp=datetime.utcnow()
+        )
+        
+        self.db.add(transaction)
+        self.db.commit()
+        self.db.refresh(transaction)
+        
+        return {
+            "transaction_id": transaction.id,
+            "amount": transaction.amount,
+            "merchant": transaction.merchant,
+            "category": transaction.category.value,
+            "timestamp": transaction.timestamp.isoformat()
+        }
+
     def fetch_recent_transactions(self, days: int = 30) -> List[Dict[str, Any]]:
         """
         Fetch recent transactions for the user.
@@ -159,7 +340,8 @@ class AgentTools:
             category_totals[category] += amount
             
             # Non-essential categories
-            if category in ["shopping", "food", "entertainment"]:
+            # If is_essential is False (default), it counts towards non-essential spending
+            if not tx.is_essential:
                 total_nonessential += amount
         
         # Get active goal for budget comparison
@@ -224,43 +406,3 @@ class AgentTools:
             "goal_title": active_goal.title
         }
     
-    def add_transaction(
-        self,
-        amount: float,
-        merchant: str,
-        category: str = "other"
-    ) -> Dict[str, Any]:
-        """
-        Add a new transaction (for testing/manual entry).
-        
-        Args:
-            amount: Transaction amount
-            merchant: Merchant name
-            category: Transaction category
-            
-        Returns:
-            Transaction information
-        """
-        try:
-            cat_enum = TransactionCategory[category.upper()]
-        except KeyError:
-            cat_enum = TransactionCategory.OTHER
-        
-        transaction = Transaction(
-            user_id=self.user.id,
-            amount=amount,
-            merchant=merchant,
-            category=cat_enum
-        )
-        
-        self.db.add(transaction)
-        self.db.commit()
-        self.db.refresh(transaction)
-        
-        return {
-            "transaction_id": transaction.id,
-            "amount": transaction.amount,
-            "merchant": transaction.merchant,
-            "category": transaction.category.value,
-            "timestamp": transaction.timestamp.isoformat()
-        }

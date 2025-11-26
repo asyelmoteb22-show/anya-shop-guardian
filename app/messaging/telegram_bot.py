@@ -91,6 +91,9 @@ class TelegramBot:
             # Get budget status
             budget_status = agent.tools.check_budget_status()
             
+            # Get active goals for progress info
+            goals = agent.tools.get_active_goals()
+            
             if budget_status["verdict"] == "NO_GOAL":
                 response = (
                     "You haven't set a goal yet! 🎯\n\n"
@@ -104,11 +107,22 @@ class TelegramBot:
                 }
                 emoji = verdict_emoji.get(budget_status["verdict"], "⚪")
                 
-                response = (
-                    f"{emoji} **Budget Status**\n\n"
-                    f"Goal: {budget_status['goal_title']}\n"
-                    f"Target: ₹{budget_status['saving_goal']:,.0f}\n\n"
-                    f"This Month:\n"
+                # Build response with goal progress
+                response = f"{emoji} **Budget Status**\n\n"
+                
+                # Add goal progress if available
+                if goals:
+                    goal = goals[0]  # Show first active goal
+                    progress_bar = self._create_progress_bar(goal['progress_percentage'])
+                    response += (
+                        f"**Goal Progress:**\n"
+                        f"{goal['title']}\n"
+                        f"{progress_bar} {goal['progress_percentage']:.0f}%\n"
+                        f"₹{goal['current_amount']:,.0f} / ₹{goal['target_amount']:,.0f}\n\n"
+                    )
+                
+                response += (
+                    f"**This Month:**\n"
                     f"Spent: ₹{budget_status['total_spent']:,.0f}\n"
                     f"Budget: ₹{budget_status['budget']:,.0f}\n"
                     f"Remaining: ₹{budget_status['remaining']:,.0f}\n\n"

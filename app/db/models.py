@@ -116,6 +116,7 @@ class Transaction(Base):
     amount = Column(Float, nullable=False)
     merchant = Column(String, nullable=False)
     category = Column(SQLEnum(TransactionCategory), default=TransactionCategory.OTHER)
+    is_essential = Column(Boolean, default=False)
     
     # Account Aggregator reference
     aa_transaction_id = Column(String, nullable=True, unique=True)

@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     telegram_webhook_url: Optional[str] = None
     telegram_webhook_secret: Optional[str] = None
     
+    # WhatsApp Business API
+    whatsapp_access_token: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_business_account_id: Optional[str] = None
+    whatsapp_verify_token: Optional[str] = "anya_verify_token_2024"
+    whatsapp_webhook_url: Optional[str] = None
+    
     # Groq (NEW)
     groq_api_key: Optional[str] = None
     groq_model: str = "llama-3.1-8b-instant"
